@@ -1,48 +1,33 @@
-use ansi_term::Colour::RGB;
-use anyhow::Result;
-use std::{fs::DirEntry, path::Path};
+use ansi_term::Color::*;
+use std::path::{Path, PathBuf};
 
-fn find_display_properties(item: DirEntry) -> Result<(String, String), anyhow::Error> {
-    let mut name = item.file_name().into_string().unwrap();
-    let meta = item.metadata()?;
-    let suffix = name.rsplit_once(".").map(|v| v.1);
-    let mut icon = "";
-
-    if meta.is_dir() {
-        name = RGB(20, 134, 227).paint(name).to_string();
-        if item.path().read_dir().count() == 0 {
-            icon = RGB(20, 134, 227).paint("󰉋").to_string().as_str();
-        } else {
-            icon = RGB(20, 134, 227).paint("󰝰").to_string().as_str();
-        }
-    } else {
-        match suffix {
-            "gitignore" => {
-                icon = "" /* name = RGB(255, 255, 255).paint(name).to_string() */
-            }
-            "toml" => icon = "",
-            "nix" => icon = "󱄅",
-            "rs" => icon = "",
-            _ => icon = "",
-        }
-    }
-
-    (icon.to_string(), name)
+enum FileType {
+    Directory,
+    Other,
 }
-// Can possibly error, so we return a result.
-// Hopefully `Ok(())` :>
-fn main() -> Result<()> {
-    // todo: grab optional input to list another directory
 
-    // make a new path struct and loop through all of the
-    // entries inside
-    let path = Path::new(".");
-    for entry in path.read_dir()? {
-        let dir = entry?;
+fn find_highlighting(path: PathBuf) -> String {
+    let name_with_prefix = path.display().to_string();
+    let name = name_with_prefix.strip_prefix("./").unwrap();
+    let file_type: FileType = if path.is_dir() {
+        FileType::Directory
+    } else {
+        FileType::Other
+    };
 
-        //let (icon, name) = find_display_properties();
-
-        //println!("{} {}", icon, name);
+    match file_type {
+        FileType::Directory => return RGB(66, 135, 245).paint(name).to_string(),
+        FileType::Other => return name.to_owned(),
     }
+}
+
+fn main() -> Result<(), anyhow::Error> {
+    let paths = Path::new(".");
+    for entry in paths.read_dir()? {
+        let path = entry?.path();
+
+        println!("{}", find_highlighting(path));
+    }
+
     Ok(())
 }
